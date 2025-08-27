@@ -4,12 +4,55 @@
   <meta charset="UTF-8">
   <title>Three-Body Simulation</title>
   <style>
-    body { margin: 0; background: #000; }
+    body { margin: 0; background: #000; color: white; font-family: Arial, sans-serif; }
     canvas { display: block; }
+    .info-panel {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 15px;
+      border-radius: 8px;
+      backdrop-filter: blur(10px);
+    }
+    .info-panel h1 {
+      margin: 0 0 10px 0;
+      font-size: 1.5em;
+      color: #4ecdc4;
+    }
+    .info-panel p {
+      margin: 5px 0;
+      font-size: 0.9em;
+      color: #ccc;
+    }
+    .btn {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 8px 16px;
+      background: #4ecdc4;
+      color: black;
+      text-decoration: none;
+      border-radius: 4px;
+      font-weight: bold;
+      transition: all 0.3s ease;
+    }
+    .btn:hover {
+      background: #45b7aa;
+      transform: translateY(-2px);
+    }
   </style>
 </head>
 <body>
   <canvas id="glCanvas"></canvas>
+  
+  <div class="info-panel">
+    <h1>🌌 三体模拟</h1>
+    <p>Three-Body Physics Simulation</p>
+    <p>观察三个天体在引力作用下的运动轨迹</p>
+    <p>Press F11 for fullscreen</p>
+    <a href="knowledge-graph.html" class="btn">🔗 分析代码结构</a>
+  </div>
+  
   <script src="threebody.js"></script>
 </body>
 </html>
