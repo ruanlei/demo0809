@@ -176,21 +176,10 @@ console.log(processed);
     const container = document.getElementById('graph-container');
     container.innerHTML = ''; // Clear previous content
     
-    // Check if D3.js is available
-    if (typeof d3 !== 'undefined' && d3.select) {
-      // Use D3.js visualizer
-      if (!this.visualizer) {
-        this.visualizer = new KnowledgeGraphVisualizer('graph-container');
-      }
-      this.visualizer.render(graphData);
-    } else {
-      // Use simple canvas visualizer as fallback
-      console.log('Using canvas fallback visualizer...');
-      if (!this.simpleVisualizer) {
-        this.simpleVisualizer = new SimpleGraphVisualizer('graph-container');
-      }
-      this.simpleVisualizer.render(graphData);
-    }
+    // Use simple canvas visualizer (more reliable than D3.js dependency)
+    console.log('Using canvas-based visualizer...');
+    this.simpleVisualizer = new SimpleGraphVisualizer('graph-container');
+    this.simpleVisualizer.render(graphData);
     
     // Display graph information
     this.displayGraphInfo(graphData);
