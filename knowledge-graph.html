@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Code Knowledge Graph Generator - 代码知识图谱生成器</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script>
+    // Fallback if D3.js fails to load
+    if (typeof d3 === 'undefined') {
+      console.log('D3.js not available, using canvas fallback...');
+      window.d3 = {
+        select: function(selector) {
+          const element = document.querySelector(selector);
+          return {
+            append: function(tag) {
+              const el = document.createElement(tag);
+              element.appendChild(el);
+              return {
+                attr: function(name, value) { 
+                  el.setAttribute(name, value); 
+                  return this; 
+                },
+                style: function(name, value) { 
+                  el.style[name] = value; 
+                  return this; 
+                },
+                text: function(text) { 
+                  el.textContent = text; 
+                  return this; 
+                }
+              };
+            },
+            select: function(sel) { return d3.select(element.querySelector(sel)); },
+            selectAll: function(sel) { return { data: function() { return { enter: function() { return { append: function() { return d3.select(element); } }; } }; } }; },
+            remove: function() { if (element.parentNode) element.parentNode.removeChild(element); }
+          };
+        },
+        forceSimulation: function() { return { force: function() { return this; }, on: function() { return this; } }; },
+        forceLink: function() { return { id: function() { return this; }, distance: function() { return this; } }; },
+        forceManyBody: function() { return { strength: function() { return this; } }; },
+        forceCenter: function() { return this; },
+        forceCollide: function() { return { radius: function() { return this; } }; },
+        zoom: function() { return { scaleExtent: function() { return this; }, on: function() { return this; } }; },
+        drag: function() { return { on: function() { return this; } }; }
+      };
+    }
+  </script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      color: #333;
+    }
+
+    .app-header {
+      background: rgba(255, 255, 255, 0.95);
+      padding: 20px;
+      text-align: center;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .app-header h1 {
+      color: #2c3e50;
+      font-size: 2.5em;
+      margin-bottom: 10px;
+    }
+
+    .app-header p {
+      color: #7f8c8d;
+      font-size: 1.1em;
+    }
+
+    .app-content {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      padding: 20px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .input-section, .output-section {
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    }
+
+    .input-section h2, .output-section h2 {
+      color: #2c3e50;
+      margin-bottom: 15px;
+      font-size: 1.5em;
+    }
+
+    .input-controls {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      background: #ecf0f1;
+      color: #2c3e50;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .btn.primary {
+      background: #3498db;
+      color: white;
+    }
+
+    .btn.primary:hover {
+      background: #2980b9;
+    }
+
+    #code-input {
+      width: 100%;
+      height: 400px;
+      border: 2px solid #bdc3c7;
+      border-radius: 8px;
+      padding: 15px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      line-height: 1.5;
+      resize: vertical;
+      background: #f8f9fa;
+    }
+
+    #code-input:focus {
+      outline: none;
+      border-color: #3498db;
+      box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+    }
+
+    #graph-container {
+      min-height: 400px;
+      border: 2px solid #bdc3c7;
+      border-radius: 8px;
+      background: #f8f9fa;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .info-panel {
+      margin-top: 15px;
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 6px;
+      border-left: 4px solid #3498db;
+    }
+
+    .info-panel h4 {
+      color: #2c3e50;
+      margin-bottom: 10px;
+    }
+
+    .info-panel ul {
+      list-style: none;
+    }
+
+    .info-panel li {
+      padding: 4px 0;
+      color: #7f8c8d;
+    }
+
+    .app-footer {
+      background: rgba(255, 255, 255, 0.95);
+      margin: 20px;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    }
+
+    .analysis-results h3 {
+      color: #2c3e50;
+      margin-bottom: 15px;
+      font-size: 1.3em;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .summary-item {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 8px;
+      border-left: 4px solid #3498db;
+    }
+
+    .summary-item h4 {
+      color: #2c3e50;
+      margin-bottom: 8px;
+      font-size: 1.1em;
+    }
+
+    .summary-item p {
+      color: #7f8c8d;
+      font-size: 0.9em;
+      line-height: 1.4;
+    }
+
+    details {
+      margin-top: 15px;
+    }
+
+    summary {
+      cursor: pointer;
+      color: #3498db;
+      font-weight: 500;
+      padding: 10px;
+      background: #f8f9fa;
+      border-radius: 6px;
+      border: 1px solid #bdc3c7;
+    }
+
+    summary:hover {
+      background: #ecf0f1;
+    }
+
+    #detailed-data {
+      max-height: 300px;
+      overflow-y: auto;
+      background: #2c3e50;
+      color: #ecf0f1;
+      padding: 15px;
+      border-radius: 6px;
+      font-size: 12px;
+      line-height: 1.4;
+      margin-top: 10px;
+    }
+
+    .graph-controls {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .graph-controls button {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 4px;
+      background: #3498db;
+      color: white;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .graph-controls button:hover {
+      background: #2980b9;
+    }
+
+    .graph-controls select {
+      padding: 6px 12px;
+      border: 1px solid #bdc3c7;
+      border-radius: 4px;
+      background: white;
+    }
+
+    .legend {
+      background: rgba(255, 255, 255, 0.9);
+      padding: 10px;
+      border-radius: 6px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Responsive design */
+    @media (max-width: 768px) {
+      .app-content {
+        grid-template-columns: 1fr;
+      }
+      
+      .app-header h1 {
+        font-size: 2em;
+      }
+      
+      .input-controls {
+        justify-content: center;
+      }
+      
+      .summary-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Loading animation */
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid #f3f3f3;
+      border-top: 2px solid #3498db;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* Graph styles */
+    .node {
+      cursor: pointer;
+    }
+
+    .node:hover {
+      stroke-width: 3px;
+    }
+
+    .link {
+      stroke-dasharray: 0;
+    }
+
+    .link:hover {
+      stroke-width: 3px !important;
+    }
+
+    .node-label {
+      pointer-events: none;
+      user-select: none;
+    }
+
+    .link-label {
+      pointer-events: none;
+      user-select: none;
+      font-size: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div id="app-container">
+    <div class="app-header">
+      <h1>🔗 代码知识图谱生成器</h1>
+      <p>Code Knowledge Graph Generator</p>
+      <p>将JavaScript代码转换为交互式知识图谱，可视化代码结构和依赖关系</p>
+    </div>
+    
+    <!-- Content will be dynamically generated by app.js -->
+  </div>
+
+  <!-- Include all required scripts -->
+  <script src="code-parser.js"></script>
+  <script src="knowledge-graph-generator.js"></script>
+  <script src="knowledge-graph-visualizer.js"></script>
+  <script src="simple-graph-visualizer.js"></script>
+  <script src="app.js"></script>
+
+  <script>
+    // Add some additional functionality for the demo
+    document.addEventListener('DOMContentLoaded', function() {
+      // Add a demo mode toggle
+      const header = document.querySelector('.app-header');
+      const demoButton = document.createElement('button');
+      demoButton.textContent = '🚀 查看三体模拟 (View Three-Body Demo)';
+      demoButton.className = 'btn';
+      demoButton.style.marginTop = '10px';
+      demoButton.onclick = function() {
+        window.open('index.html', '_blank');
+      };
+      header.appendChild(demoButton);
+    });
+  </script>
+</body>
+</html>
