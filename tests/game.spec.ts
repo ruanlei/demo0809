@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { PerspectiveCamera, Vector3 } from 'three';
 
 test('opens the room door after collecting the key and talking to the caretaker', async ({ page }) => {
@@ -47,8 +47,7 @@ test('keeps the game playable without WebGL', async ({ page }) => {
 });
 
 
-test('scene objects dispatch interactions and the room can orbit', async ({ page }) => {
-  await page.goto('/');
+async function roomPointer(page: Page) {
   const canvas = page.locator('canvas');
   await expect(canvas).toBeVisible();
   const box = await canvas.boundingBox();
@@ -62,8 +61,19 @@ test('scene objects dispatch interactions and the room can orbit', async ({ page
   // Project the centers of the visible meshes into the actual canvas size.
   const clickObject = async (point: Vector3) => {
     point.project(camera);
-    await page.mouse.click(box.x + (point.x + 1) * box.width / 2, box.y + (1 - point.y) * box.height / 2);
+    await canvas.click({
+      position: { x: (point.x + 1) * box.width / 2, y: (1 - point.y) * box.height / 2 },
+    });
   };
+
+  return { canvas, box, clickObject };
+}
+
+test('keeps 3D interactions and orbit controls working when the avatar fails to load', async ({ page }) => {
+  await page.route('**/models/caretaker.vrm', (route) => route.fulfill({ status: 404 }));
+  await page.goto('/');
+  const { canvas, box, clickObject } = await roomPointer(page);
+  await expect(canvas).toHaveAttribute('data-caretaker', 'placeholder');
 
   await clickObject(new Vector3(1.89, 1.51, -2.54));
   await expect(page.getByRole('status')).toContainText('The door is locked.');
@@ -82,4 +92,40 @@ test('scene objects dispatch interactions and the room can orbit', async ({ page
   await page.mouse.move(box.x + box.width / 2 - 80, box.y + box.height / 2, { steps: 10 });
   await page.mouse.up();
   await expect.poll(async () => (await canvas.screenshot()).equals(before)).toBe(false);
+});
+
+
+test('renders the VRM caretaker and plays its greeting from the scene interaction', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  page.on('console', (message) => {
+    if (/THREE.WebGLProgram: Shader Error|THREE.PropertyBinding:/.test(message.text())) {
+      errors.push(message.text());
+    }
+  });
+  await page.goto('/');
+  const { canvas, clickObject } = await roomPointer(page);
+  await expect(canvas).toHaveAttribute('data-caretaker', 'animated', { timeout: 15_000 });
+  await canvas.screenshot();
+  await clickObject(new Vector3(-2.4, 1.45, -.65));
+  const dialogue = page.getByRole('region', { name: 'Caretaker dialogue' });
+  await expect(dialogue).toBeVisible();
+  const before = await canvas.screenshot();
+  await expect.poll(async () => (await canvas.screenshot()).equals(before)).toBe(false);
+  await dialogue.getByRole('button', { name: 'Close dialogue' }).click();
+  await expect(dialogue).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
+test('keeps the VRM caretaker interactive without its greeting asset', async ({ page }) => {
+  await page.route('**/models/caretaker-greeting.vrma', (route) => route.fulfill({ status: 404 }));
+  const missingGreeting = page.waitForResponse((response) =>
+    response.url().endsWith('/models/caretaker-greeting.vrma') && response.status() === 404);
+  await page.goto('/');
+  const { canvas, clickObject } = await roomPointer(page);
+  await missingGreeting;
+  await expect(canvas).toHaveAttribute('data-caretaker', 'avatar');
+  await canvas.screenshot();
+  await clickObject(new Vector3(-2.4, 1.45, -.65));
+  await expect(page.getByRole('region', { name: 'Caretaker dialogue' })).toBeVisible();
 });

@@ -3,6 +3,7 @@
 import { Component, type ReactNode, useEffect, useState } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
+import CaretakerAvatar from './CaretakerAvatar';
 import { useGame } from '../../lib/game/store';
 
 function Fallback() {
@@ -33,7 +34,7 @@ function Block({ position, size, color }: {
 }
 
 function Room() {
-  const { inventory, door, dispatch } = useGame();
+  const { inventory, door, dialogue, dispatch } = useGame();
 
   return (
     <>
@@ -53,16 +54,22 @@ function Room() {
           <meshStandardMaterial color="#ffd078" />
         </mesh>
       </group>
-      <group position={[-2.4, 0, -.65]}
-        onClick={(event) => { event.stopPropagation(); dispatch('interactWithNpc'); }}>
-        <Block position={[0, .71, 0]} size={[.62, .95, .46]} color="#a6c3a1" />
-        <Block position={[-.17, .16, 0]} size={[.22, .32, .38]} color="#283e37" />
-        <Block position={[.17, .16, 0]} size={[.22, .32, .38]} color="#283e37" />
-        <mesh position={[0, 1.45, 0]}>
-          <sphereGeometry args={[.29, 24, 16]} />
-          <meshStandardMaterial color="#d6a87d" />
+      <group position={[-2.4, 0, -.65]}>
+        <mesh position={[0, .9, 0]}
+          onClick={(event) => { event.stopPropagation(); dispatch('interactWithNpc'); }}>
+          <boxGeometry args={[1.15, 1.8, .75]} />
+          <meshBasicMaterial colorWrite={false} depthWrite={false} />
         </mesh>
-        <Block position={[0, 1.48, .263]} size={[.26, .07, .04]} color="#283e37" />
+        <CaretakerAvatar talking={dialogue === 'open'}>
+          <Block position={[0, .71, 0]} size={[.62, .95, .46]} color="#a6c3a1" />
+          <Block position={[-.17, .16, 0]} size={[.22, .32, .38]} color="#283e37" />
+          <Block position={[.17, .16, 0]} size={[.22, .32, .38]} color="#283e37" />
+          <mesh position={[0, 1.45, 0]}>
+            <sphereGeometry args={[.29, 24, 16]} />
+            <meshStandardMaterial color="#d6a87d" />
+          </mesh>
+          <Block position={[0, 1.48, .263]} size={[.26, .07, .04]} color="#283e37" />
+        </CaretakerAvatar>
       </group>
       <Block position={[.65, .26, .85]} size={[.8, .52, .8]} color="#31514c" />
       {inventory === 'empty' && (
@@ -94,7 +101,7 @@ export default function GameScene() {
   return (
     <div className="viewport">
       <SceneBoundary>
-        <Canvas camera={{ position: [8, 7, 10], fov: 46 }} fallback={<Fallback />}>
+        <Canvas gl={{ antialias: false }} camera={{ position: [8, 7, 10], fov: 46 }} fallback={<Fallback />}>
           <color attach="background" args={['#141f20']} />
           <ambientLight intensity={1.2} />
           <directionalLight position={[4, 7, 5]} intensity={2.2} color="#ffe1af" />

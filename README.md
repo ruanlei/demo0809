@@ -26,3 +26,9 @@ npm run build
 On Linux, use `npx playwright install --with-deps chromium` if browser system dependencies are missing. In an environment with a compatible system Chromium, set `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` to its executable to use it instead of the bundled browser.
 
 Day 1 uses one room, in-memory progress and fixed dialogue. It requires no credentials or external services at runtime.
+
+## Day 2 caretaker
+
+The caretaker uses a local VRM model, a subtle idle motion and a greeting that plays when dialogue opens. The original geometry appears while the model loads or if it fails. A missing greeting clip leaves the model and dialogue usable.
+
+Both assets come from pixiv's [three-vrm examples at 3caf7a2](https://github.com/pixiv/three-vrm/tree/3caf7a21ee68f0d5dfa363ab3d577450bbf60136/packages). The model is pixiv Inc.'s `VRM1_Constraint_Twist_Sample.vrm` v1.0.1, distributed under its [embedded VRM 1.0 terms](https://vrm.dev/licenses/1.0/). The greeting is the example `test.vrma`, distributed with the [upstream MIT notice](public/models/three-vrm-LICENSE.txt). Both files are bundled locally, so play uses no third-party asset requests.
