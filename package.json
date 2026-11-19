@@ -1,0 +1,43 @@
+{
+  "name": "text-to-game",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run tests/game-rules.test.ts",
+    "test:e2e": "playwright test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ruanlei/demo0809.git"
+  },
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/ruanlei/demo0809/issues"
+  },
+  "homepage": "https://github.com/ruanlei/demo0809#readme",
+  "private": true,
+  "dependencies": {
+    "@react-three/drei": "^10.7.9",
+    "@react-three/fiber": "^9.8.2",
+    "next": "^16.4.6",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "three": "^0.187.0",
+    "zustand": "^5.1.0"
+  },
+  "engines": {
+    "node": "^22.12.0 || >=24.0.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.65.1",
+    "@types/node": "^24.19.2",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@types/three": "^0.187.0",
+    "typescript": "^5.9.3",
+    "vitest": "^5.1.1"
+  }
+}
